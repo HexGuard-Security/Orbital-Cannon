@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orbital Cannon</title>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css" />
+    <!-- Google Fonts -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Fira+Code:wght@400;500;600&display=swap">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+    <!-- Splash Screen -->
+    <div id="splash-screen" class="splash-screen">
+        <div class="splash-container">
+            <div class="splash-header">
+                <div class="logo-container">
+                    <div class="logo-icon"><i class="fas fa-satellite"></i></div>
+                    <div class="logo-text">ORBITAL CANNON</div>
+                </div>
+                <div class="tagline">Advanced Satellite Tracking & Communication Platform</div>
+                <div class="decorative-line"></div>
+            </div>
+            
+            <div class="splash-body">
+                <div class="splash-column features-column">
+                    <div class="column-header">
+                        <i class="fas fa-rocket"></i>
+                        <h2>Capabilities</h2>
+                    </div>
+                    <ul class="feature-list">
+                        <li><i class="fas fa-satellite-dish"></i> Real-time Satellite Tracking</li>
+                        <li><i class="fas fa-broadcast-tower"></i> Ground Station Integration</li>
+                        <li><i class="fas fa-chart-line"></i> Doppler Shift Analysis</li>
+                        <li><i class="fas fa-route"></i> Orbital Path Prediction</li>
+                        <li><i class="fas fa-clock"></i> Pass Prediction & Scheduling</li>
+                    </ul>
+                </div>
+                
+                <div class="splash-column about-column">
+                    <div class="column-header">
+                        <i class="fas fa-info-circle"></i>
+                        <h2>About</h2>
+                    </div>
+                    <p class="about-text">
+                        Orbital Cannon is a professional satellite tracking platform designed for amateur radio operators, space enthusiasts, and satellite communication specialists. Monitor satellites in real-time with precision.
+                    </p>
+                    <div class="version-badge">
+                        <span>Version</span>
+                        <a href="#" target="_blank">1.0.0 BETA</a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="splash-footer">
+                <div class="loading-bar">
+                    <div class="loading-progress"></div>
+                </div>
+                <div class="loading-text">Loading satellite database... Please wait</div>
+            </div>
+        </div>
+        <div class="background-glow"></div>
+        <div class="background-grid"></div>
+    </div>
+    
+    <!-- Main Application -->
+    <div id="app" class="hidden">
+        <header>
+            <div class="logo">
+                <i class="fas fa-satellite logo-icon"></i>
+                Orbital Cannon
+            </div>
+        </header>
+        
+        <div class="container">
+            <div class="main">
+                <!-- Satellite List Panel -->
+                <div class="card satellite-list">
+                    <h2>Satellites</h2>
+                    <div class="satellite-filters">
+                        <div class="search-container">
+                            <input type="text" id="satellite-search" placeholder="Search satellites..." onkeyup="debounce(searchSatellites, 500)()">
+                            <i class="fas fa-search"></i>
+                        </div>
+                        <div class="category-filters">
+                            <select id="category-filter" onchange="searchSatellites()">
+                                <option value="all">All Categories</option>
+                                <option value="active">Active</option>
+                                <option value="stations">Space Stations</option>
+                                <option value="visual">Visual</option>
+                                <option value="amateur">Amateur</option>
+                                <option value="weather">Weather</option>
+                                <option value="gps">Navigation/GPS</option>
+                                <option value="starlink">Starlink</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="satellite-stats">
+                        <span id="satellite-count">0</span> satellites (<span id="total-count">0</span> total)
+                    </div>
+                    <div id="satellite-list-container">
+                        <div class="loading"><i class="fas fa-spinner fa-spin"></i> Loading satellites...</div>
+                    </div>
+                    <div class="pagination-controls">
+                        <button id="prev-page" class="btn btn-small" onclick="changePage(-1)" disabled>
+                            <i class="fas fa-chevron-left"></i> Previous
+                        </button>
+                        <span id="page-indicator">Page 1 of 1</span>
+                        <button id="next-page" class="btn btn-small" onclick="changePage(1)" disabled>
+                            Next <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Information Panel -->
+                <div class="card info-panel">
+                    <h2>Satellite Information</h2>
+                    <div id="satellite-info">
+                        <p>Select a satellite to view details.</p>
+                    </div>
+                    
+                    <div id="tracking-controls" style="display: none;">
+                        <button id="tracking-btn" class="btn" onclick="toggleTracking()">
+                            <i class="fas fa-play"></i> Start Tracking
+                        </button>
+                    </div>
+                    
+                    <div id="position-data" style="display: none;">
+                        <h3>Current Position</h3>
+                        <div class="position-grid">
+                            <div class="position-item">
+                                <span class="position-label">Latitude</span>
+                                <span id="latitude" class="position-value">0.0000°</span>
+                            </div>
+                            <div class="position-item">
+                                <span class="position-label">Longitude</span>
+                                <span id="longitude" class="position-value">0.0000°</span>
+                            </div>
+                            <div class="position-item">
+                                <span class="position-label">Altitude</span>
+                                <span id="altitude" class="position-value">0.00 km</span>
+                            </div>
+                            <div class="position-item">
+                                <span class="position-label">Velocity</span>
+                                <span id="velocity" class="position-value">0.00 km/s</span>
+                            </div>
+                        </div>
+                        
+                        <div id="map-container"></div>
+                        
+                        <div class="tab-container">
+                            <div class="tab-buttons">
+                                <button class="tab-btn active" onclick="showTab('pass-predictions')">
+                                    <i class="fas fa-calendar-alt"></i> Pass Predictions
+                                </button>
+                                <button class="tab-btn" onclick="showTab('doppler-shift')">
+                                    <i class="fas fa-wave-square"></i> Doppler Shift
+                                </button>
+                                <button class="tab-btn" onclick="showTab('ground-station')">
+                                    <i class="fas fa-broadcast-tower"></i> Ground Station
+                                </button>
+                            </div>
+                            
+                            <div id="pass-predictions" class="tab-content active">
+                                <h3>Upcoming Passes</h3>
+                                <table class="passes-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Start Time</th>
+                                            <th>End Time</th>
+                                            <th>Max Elevation</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="passes-table-body">
+                                        <tr>
+                                            <td colspan="4" class="loading">Loading pass predictions...</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div id="doppler-shift" class="tab-content">
+                                <h3>Doppler Shift Calculator</h3>
+                                <div class="doppler-container">
+                                    <div class="doppler-input">
+                                        <label for="transmit-freq">Transmit Frequency (MHz):</label>
+                                        <input type="number" id="transmit-freq" value="435.0" step="0.001">
+                                        <button class="btn btn-accent btn-small" onclick="calculateDoppler()">
+                                            <i class="fas fa-calculator"></i> Calculate
+                                        </button>
+                                    </div>
+                                    <div id="doppler-result" class="doppler-result">
+                                        Calculated shifts will appear here.
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div id="ground-station" class="tab-content">
+                                <h3>Ground Station Settings</h3>
+                                <div class="ground-station">
+                                    <div class="ground-station-grid">
+                                        <div>
+                                            <label for="gs-name">Station Name:</label>
+                                            <input type="text" id="gs-name" value="My Ground Station">
+                                        </div>
+                                        <div>
+                                            <label for="gs-lat">Latitude:</label>
+                                            <input type="number" id="gs-lat" value="37.7749" step="0.0001">
+                                        </div>
+                                        <div>
+                                            <label for="gs-lon">Longitude:</label>
+                                            <input type="number" id="gs-lon" value="-122.4194" step="0.0001">
+                                        </div>
+                                        <div>
+                                            <label for="gs-alt">Altitude (m):</label>
+                                            <input type="number" id="gs-alt" value="10" step="1">
+                                        </div>
+                                    </div>
+                                    <button class="btn btn-accent" style="margin-top: 15px;" onclick="updateGroundStation()">
+                                        <i class="fas fa-save"></i> Save Settings
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <!-- Orbit Visualizer -->
+    <script src="orbit-visualizer.js"></script>
+    <script>
+        // Global state
+        let selectedSatellite = null;
+        let isTracking = false;
+        let trackingInterval = null;
+        let map = null;
+        let marker = null;
+        let orbitVisualizer = null;
+        let groundStation = {
+            name: "My Ground Station",
+            latitude: 37.7749,
+            longitude: -122.4194,
+            altitude: 10
+        };
+        let currentPage = 1;
+        let totalPages = 1;
+        let searchQuery = '';
+        let category = 'all';
+        
+        // Initialize the app when the window loads
+        window.onload = function() {
+            loadSatellites();
+            setTimeout(function() {
+                document.getElementById('splash-screen').style.opacity = '0';
+                setTimeout(function() {
+                    document.getElementById('splash-screen').style.display = 'none';
+                    document.getElementById('app').classList.remove('hidden');
+                }, 500);
+            }, 3000); // Display splash screen for 3 seconds
+        };
+        
+        // Load satellites from API
+        async function loadSatellites() {
+            try {
+                const response = await fetch(`/api/satellites?page=${currentPage}&limit=10&search=${searchQuery}&category=${category}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    displaySatellites(data.data);
+                    totalPages = Math.ceil(data.total / 10);
+                    updatePagination();
+                } else {
+                    console.error('Failed to load satellites:', data.message);
+                    document.getElementById('satellite-list-container').innerHTML = '<div class="error">Error loading satellites. Please try again.</div>';
+                }
+            } catch (error) {
+                console.error('Error fetching satellites:', error);
+                document.getElementById('satellite-list-container').innerHTML = '<div class="error">Error loading satellites. Please try again.</div>';
+            }
+        }
+        
+        // Display satellites in the list
+        function displaySatellites(satellites) {
+            const container = document.getElementById('satellite-list-container');
+            let html = '';
+            
+            satellites.forEach(satellite => {
+                html += `
+                <div class="satellite-item" data-id="${satellite.id}" onclick="selectSatellite(${satellite.id}, '${satellite.name}')">
+                    <i class="fas fa-satellite satellite-icon"></i>
+                    ${satellite.name}
+                </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+            document.getElementById('satellite-count').textContent = satellites.length;
+            document.getElementById('total-count').textContent = totalPages * 10;
+        }
+        
+        // Select a satellite
+        function selectSatellite(id, name) {
+            // Reset error messages
+            document.getElementById('satellite-info').innerHTML = '';
+            
+            // Remove selected class from all satellites
+            document.querySelectorAll('.satellite-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            
+            // Add selected class to the clicked satellite
+            const selectedItem = document.querySelector(`.satellite-item[data-id="${id}"]`);
+            if (selectedItem) {
+                selectedItem.classList.add('selected');
+            }
+            
+            // Stop tracking if currently tracking a different satellite
+            if (isTracking && selectedSatellite && selectedSatellite.id !== id) {
+                stopTracking();
+            }
+            
+            // Set selected satellite
+            selectedSatellite = { id, name };
+            
+            // Update UI
+            document.getElementById('satellite-info').innerHTML = `
+            <h3>${name}</h3>
+            <p>ID: ${id}</p>
+            <p>Status: <span class="status-active">Active</span></p>
+            `;
+            
+            // Show tracking controls
+            document.getElementById('tracking-controls').style.display = 'block';
+            
+            // Automatically start tracking the selected satellite
+            if (!isTracking) {
+                startTracking();
+            }
+        }
+        
+        // Toggle tracking
+        function toggleTracking() {
+            if (isTracking) {
+                stopTracking();
+            } else {
+                startTracking();
+            }
+        }
+        
+        // Start tracking satellite
+        function startTracking() {
+            if (!selectedSatellite) return;
+            
+            isTracking = true;
+            document.getElementById('tracking-btn').innerHTML = '<i class="fas fa-stop"></i> Stop Tracking';
+            document.getElementById('tracking-btn').classList.add('active');
+            document.getElementById('position-data').style.display = 'block';
+            
+            // Clear any previous error messages
+            const errorMessages = document.querySelectorAll('.error-message');
+            errorMessages.forEach(msg => msg.remove());
+            
+            // Fetch position immediately
+            fetchSatellitePosition();
+            
+            // Set up interval for continuous tracking
+            if (trackingInterval) {
+                clearInterval(trackingInterval);
+            }
+            trackingInterval = setInterval(fetchSatellitePosition, 5000);
+            
+            // Initialize map
+            if (!map) {
+                map = L.map('map-container').setView([0, 0], 2);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a>',
+                    maxZoom: 18,
+                    subdomains: ['a', 'b', 'c']
+                }).addTo(map);
+                
+                // Add ground station marker
+                L.marker([groundStation.latitude, groundStation.longitude], {
+                    icon: L.divIcon({
+                        html: '<i class="fas fa-broadcast-tower" style="color: #2196F3; font-size: 24px;"></i>',
+                        className: 'custom-div-icon',
+                        iconSize: [30, 30],
+                        iconAnchor: [15, 30]
+                    })
+                }).addTo(map)
+                .bindPopup(`<strong>${groundStation.name}</strong><br>Latitude: ${groundStation.latitude}<br>Longitude: ${groundStation.longitude}`);
+                
+                // Initialize orbit visualizer
+                orbitVisualizer = new OrbitVisualizer(map);
+            }
+        }
+        
+        // Stop tracking satellite
+        function stopTracking() {
+            isTracking = false;
+            document.getElementById('tracking-btn').innerHTML = '<i class="fas fa-play"></i> Start Tracking';
+            document.getElementById('tracking-btn').classList.remove('active');
+            
+            if (trackingInterval) {
+                clearInterval(trackingInterval);
+                trackingInterval = null;
+            }
+            
+            // Clear orbit visualization
+            if (orbitVisualizer) {
+                orbitVisualizer.clearOrbit();
+            }
+        }
+        
+        // Fetch satellite position
+        async function fetchSatellitePosition() {
+            if (!selectedSatellite) return;
+            
+            try {
+                console.log(`Fetching position for satellite ID: ${selectedSatellite.id}`);
+                const response = await fetch(`/api/satellites/${selectedSatellite.id}/position`);
+                const data = await response.json();
+                
+                console.log('Satellite position response:', data);
+                
+                if (data.success && data.data) {
+                    // Remove any error messages
+                    const errorMessages = document.querySelectorAll('.error-message');
+                    errorMessages.forEach(msg => msg.remove());
+                    
+                    updatePositionDisplay(data.data);
+                    
+                    // Update map marker
+                    if (marker) {
+                        map.removeLayer(marker);
+                    }
+                    marker = L.marker([data.data.latitude, data.data.longitude], {
+                        icon: L.divIcon({
+                            html: '<i class="fas fa-satellite" style="color: #4CAF50; font-size: 24px;"></i>',
+                            className: 'custom-div-icon',
+                            iconSize: [30, 30],
+                            iconAnchor: [15, 15]
+                        })
+                    }).addTo(map)
+                    .bindPopup(`<strong>${selectedSatellite.name}</strong><br>Latitude: ${data.data.latitude.toFixed(4)}<br>Longitude: ${data.data.longitude.toFixed(4)}<br>Altitude: ${data.data.altitude.toFixed(2)} km`);
+                    
+                    map.setView([data.data.latitude, data.data.longitude], 3);
+                    
+                    // Add orbit path
+                    drawOrbitPath(data.data);
+                    
+                    // Fetch pass predictions if we're in the pass predictions tab
+                    if (document.getElementById('pass-predictions').classList.contains('active')) {
+                        fetchPassPredictions();
+                    }
+                } else {
+                    console.error('Failed to get position:', data.message);
+                    const errorHtml = `<div class="error-message">
+                        <i class="fas fa-exclamation-triangle"></i> Error fetching satellite position data.
+                    </div>`;
+                    
+                    // Only add error message if it doesn't already exist
+                    if (!document.querySelector('.error-message')) {
+                        document.getElementById('satellite-info').innerHTML += errorHtml;
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching position:', error);
+                const errorHtml = `<div class="error-message">
+                    <i class="fas fa-exclamation-triangle"></i> Unable to connect to the server. Please check your internet connection.
+                </div>`;
+                
+                // Only add error message if it doesn't already exist
+                if (!document.querySelector('.error-message')) {
+                    document.getElementById('satellite-info').innerHTML += errorHtml;
+                }
+                
+                // Disable tracking on error
+                stopTracking();
+            }
+        }
+        
+        // Draw satellite orbit path on map
+        function drawOrbitPath(position) {
+            if (orbitVisualizer) {
+                orbitVisualizer.drawOrbit(position, '#9D4EDD');
+            }
+        }
+        
+        // Update position display
+        function updatePositionDisplay(position) {
+            document.getElementById('latitude').textContent = position.latitude.toFixed(4) + '°';
+            document.getElementById('longitude').textContent = position.longitude.toFixed(4) + '°';
+            document.getElementById('altitude').textContent = position.altitude.toFixed(2) + ' km';
+            document.getElementById('velocity').textContent = position.velocity.toFixed(2) + ' km/s';
+        }
+        
+        // Fetch pass predictions for the selected satellite
+        async function fetchPassPredictions() {
+            if (!selectedSatellite) return;
+            
+            const passesTable = document.getElementById('passes-table-body');
+            passesTable.innerHTML = '<tr><td colspan="4" class="loading"><i class="fas fa-spinner fa-spin"></i> Calculating passes...</td></tr>';
+            
+            try {
+                // Get ground station data from inputs
+                const groundStationData = {
+                    latitude: parseFloat(document.getElementById('gs-lat').value),
+                    longitude: parseFloat(document.getElementById('gs-lon').value),
+                    altitude: parseFloat(document.getElementById('gs-alt').value),
+                    days: 7,
+                    min_elevation: 10
+                };
+                
+                // Call backend API for pass predictions
+                const response = await fetch(`/api/satellites/${selectedSatellite.id}/passes`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(groundStationData),
+                });
+                
+                const data = await response.json();
+                
+                if (data.success && data.data && data.data.length > 0) {
+                    // Display pass predictions
+                    let passesHtml = '';
+                    
+                    data.data.forEach(pass => {
+                        // Parse dates
+                        const aosDate = new Date(pass.aos_time);
+                        const losDate = new Date(pass.los_time);
+                        
+                        // Format for display
+                        const dateStr = aosDate.toLocaleDateString();
+                        const aosTime = aosDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                        const losTime = losDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                        
+                        passesHtml += `
+                        <tr>
+                            <td>${dateStr}</td>
+                            <td>${aosTime}</td>
+                            <td>${losTime}</td>
+                            <td>${pass.max_elevation.toFixed(1)}°</td>
+                        </tr>
+                        `;
+                    });
+                    
+                    passesTable.innerHTML = passesHtml;
+                } else {
+                    passesTable.innerHTML = '<tr><td colspan="4" class="error">No passes found in the next 7 days.</td></tr>';
+                }
+            } catch (error) {
+                console.error('Error fetching passes:', error);
+                passesTable.innerHTML = '<tr><td colspan="4" class="error">Error calculating passes. Please try again.</td></tr>';
+            }
+        }
+        
+        // Show tab content
+        function showTab(tabId) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Remove active class from all tab buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Show selected tab content
+            document.getElementById(tabId).classList.add('active');
+            
+            // Add active class to clicked tab button
+            document.querySelector(`.tab-btn[onclick="showTab('${tabId}')"]`).classList.add('active');
+        }
+        
+        // Calculate Doppler shift
+        function calculateDoppler() {
+            const transmitFreq = parseFloat(document.getElementById('transmit-freq').value);
+            
+            if (!selectedSatellite || !isTracking) {
+                document.getElementById('doppler-result').innerHTML = 'Start tracking a satellite first to calculate Doppler shift.';
+                return;
+            }
+            
+            // This is a simplified Doppler shift calculation for demonstration
+            const velocity = parseFloat(document.getElementById('velocity').textContent);
+            const speedOfLight = 299792.458; // km/s
+            
+            // Simple approximation (not accounting for actual direction)
+            const approachingShift = transmitFreq * (1 + velocity / speedOfLight);
+            const recedingShift = transmitFreq * (1 - velocity / speedOfLight);
+            
+            document.getElementById('doppler-result').innerHTML = `
+            <div><strong>Transmit Frequency:</strong> ${transmitFreq.toFixed(3)} MHz</div>
+            <div><strong>When approaching:</strong> ${approachingShift.toFixed(4)} MHz <span style="color: var(--accent);">(+${(approachingShift - transmitFreq).toFixed(4)} MHz)</span></div>
+            <div><strong>When receding:</strong> ${recedingShift.toFixed(4)} MHz <span style="color: var(--danger);">(-${(transmitFreq - recedingShift).toFixed(4)} MHz)</span></div>
+            `;
+        }
+        
+        // Update ground station settings
+        function updateGroundStation() {
+            groundStation.name = document.getElementById('gs-name').value;
+            groundStation.latitude = parseFloat(document.getElementById('gs-lat').value);
+            groundStation.longitude = parseFloat(document.getElementById('gs-lon').value);
+            groundStation.altitude = parseFloat(document.getElementById('gs-alt').value);
+            
+            // Update map if initialized
+            if (map) {
+                // Remove existing ground station markers
+                map.eachLayer(layer => {
+                    if (layer instanceof L.Marker && layer !== marker) {
+                        map.removeLayer(layer);
+                    }
+                });
+                
+                // Add updated ground station marker
+                L.marker([groundStation.latitude, groundStation.longitude], {
+                    icon: L.divIcon({
+                        html: '<i class="fas fa-broadcast-tower" style="color: #2196F3; font-size: 24px;"></i>',
+                        className: 'custom-div-icon',
+                        iconSize: [30, 30],
+                        iconAnchor: [15, 30]
+                    })
+                }).addTo(map)
+                .bindPopup(`<strong>${groundStation.name}</strong><br>Latitude: ${groundStation.latitude}<br>Longitude: ${groundStation.longitude}`);
+            }
+            
+            alert('Ground station settings updated!');
+        }
+        
+        // Search satellites
+        function searchSatellites() {
+            searchQuery = document.getElementById('satellite-search').value.toLowerCase();
+            category = document.getElementById('category-filter').value;
+            currentPage = 1;
+            loadSatellites();
+        }
+        
+        // Change page
+        function changePage(delta) {
+            currentPage += delta;
+            if (currentPage < 1) currentPage = 1;
+            if (currentPage > totalPages) currentPage = totalPages;
+            loadSatellites();
+        }
+        
+        // Update pagination
+        function updatePagination() {
+            document.getElementById('page-indicator').textContent = `Page ${currentPage} of ${totalPages}`;
+            document.getElementById('prev-page').disabled = currentPage === 1;
+            document.getElementById('next-page').disabled = currentPage === totalPages;
+        }
+        
+        // Debounce function
+        function debounce(func, wait) {
+            let timeout;
+            return function() {
+                const context = this;
+                const args = arguments;
+                clearTimeout(timeout);
+                timeout = setTimeout(() => {
+                    func.apply(context, args);
+                }, wait);
+            };
+        }
+    </script>
+</body>
+</html>
